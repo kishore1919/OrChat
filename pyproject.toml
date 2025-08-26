@@ -28,6 +28,7 @@ dependencies = [
     "pyfzf",
     "cryptography",
     "prompt_toolkit",
+    "textual",  
 ]
 
 [project.scripts]
@@ -40,4 +41,7 @@ Repository = "https://github.com/oop7/OrChat"
 Reddit = "https://www.reddit.com/r/NO-N_A_M_E/"
 
 [tool.setuptools]
-py-modules = ["main"]
+py-modules = ["main", "constants", "utils", "completion", "config", "api_client", "model_selection", "chat", "file_handler", "ui"]
+
+[tool.setuptools.package-dir]
+"" = "."
