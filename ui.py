@@ -83,25 +83,6 @@ def check_for_updates(silent=False):
             console.print(f"[yellow]Could not check for updates: {str(e)}[/yellow]")
         return False
 
-def create_chat_ui():
-    """Creates a modern, attractive CLI interface using rich components"""
-    console.print(Panel.fit(
-        f"[bold blue]Or[/bold blue][bold green]Chat[/bold green] [dim]v{APP_VERSION}[/dim]\n"
-        "[dim]A powerful CLI for AI models via OpenRouter[/dim]",
-        title="🚀 Welcome",
-        border_style="green",
-        padding=(1, 2)
-    ))
-
-    # Display a starting tip
-    console.print(Panel(
-        "Type [bold green]/help[/bold green] for commands\n"
-        "[bold cyan]/model[/bold cyan] to change AI models\n"
-        "[bold yellow]/theme[/bold yellow] to customize appearance",
-        title="Quick Tips",
-        border_style="blue",
-        width=40
-    ))
 
 def show_help():
     """Display the help message"""
@@ -125,7 +106,7 @@ def show_help():
         "/thinking-mode - Toggle thinking mode on/off\n"
         "# - Browse and attach files (can be used anywhere in your message)"
     )
-    console.print(Panel.fit(help_text, title="Available Commands"))
+    console.print(Panel.fit(help_text, title="Available Commands", border_style="green", padding=(1, 2)))
     try:
         from completion import HAS_PROMPT_TOOLKIT
         if HAS_PROMPT_TOOLKIT:
@@ -138,7 +119,9 @@ def show_help():
                  "[dim]• Press Ctrl+R to search through prompt history[/dim]\n"
                  "[dim]• Press Esc+Enter to toggle multi-line input mode[/dim]\n"
                  "[dim]• Auto-suggestions: Previous prompts appear as grey text while typing[/dim]"),
-                title="Interactive Features"
+                title="Interactive Features",
+                border_style="green",
+                padding=(1, 2)
             ))
     except ImportError:
         pass

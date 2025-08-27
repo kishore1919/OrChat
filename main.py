@@ -12,7 +12,7 @@ from config import load_config, save_config, secure_input_api_key
 from constants import APP_VERSION
 from file_handler import handle_attachment
 from model_selection import select_model
-from ui import create_chat_ui, check_for_updates
+from ui import check_for_updates
 
 console = Console()
 
@@ -21,21 +21,35 @@ def setup_wizard():
     console.print(Panel.fit(
         "[bold blue]Welcome to the OrChat Setup Wizard![/bold blue]\n" \
         "Let's configure your chat settings.",
-        title="Setup Wizard"
+        title="Setup Wizard",
+        border_style="blue",
+        padding=(1, 2)
     ))
 
     if "OPENROUTER_API_KEY" not in os.environ:
-        console.print("[bold yellow]🔐 API Key Setup[/bold yellow]")
-        console.print("[dim]Your API key will be encrypted and stored securely[/dim]")
+        console.print(Panel.fit(
+            "[bold yellow]🔐 API Key Setup[/bold yellow]\n"
+            "[dim]Your API key will be encrypted and stored securely[/dim]",
+            border_style="yellow",
+            padding=(0, 2)
+        ))
         
         # Loop until we get a valid API key or user explicitly cancels
         while True:
             api_key = secure_input_api_key()
             if not api_key:
-                console.print("[red]Invalid API key provided.[/red]")
+                console.print(Panel.fit(
+                    "[red]Invalid API key provided.[/red]",
+                    border_style="red",
+                    padding=(0, 1)
+                ))
                 retry = Prompt.ask("Would you like to try again? (y/n)", default="y")
                 if retry.lower() != 'y':
-                    console.print("[red]Setup cancelled - no valid API key provided[/red]")
+                    console.print(Panel.fit(
+                        "[red]Setup cancelled - no valid API key provided[/red]",
+                        border_style="red",
+                        padding=(0, 1)
+                    ))
                     return None
                 continue  # Ask for API key again
             else:
@@ -61,19 +75,35 @@ def setup_wizard():
             # Use the thinking_mode value that was set during model selection
             thinking_mode = temp_config.get('thinking_mode', False)
         else:
-            console.print("[yellow]Model selection cancelled. You can set a model later.[/yellow]")
+            console.print(Panel.fit(
+                "[yellow]Model selection cancelled. You can set a model later.[/yellow]",
+                border_style="yellow",
+                padding=(0, 1)
+            ))
     except Exception as e:
-        console.print(f"[yellow]Error during model selection: {str(e)}. You can set a model later.[/yellow]")
+        console.print(Panel.fit(
+            f"[yellow]Error during model selection: {str(e)}. You can set a model later.[/yellow]",
+            border_style="yellow",
+            padding=(0, 1)
+        ))
 
     temperature = float(Prompt.ask("Set temperature (0.0-2.0)", default="0.7"))
     if temperature > 1.0:
-        console.print("[yellow]Warning: High temperature values (>1.0) may cause erratic or nonsensical responses.[/yellow]")
+        console.print(Panel.fit(
+            "[yellow]Warning: High temperature values (>1.0) may cause erratic or nonsensical responses.[/yellow]",
+            border_style="yellow",
+            padding=(0, 1)
+        ))
         confirm = Prompt.ask("Are you sure you want to use this high temperature? (y/n)", default="n")
         if confirm.lower() != 'y':
             temperature = float(Prompt.ask("Enter a new temperature value (0.0-1.0)", default="0.7"))
 
-    console.print("[bold]Enter system instructions (guide the AI's behavior)[/bold]")
-    console.print("[dim]Press Enter twice to finish[/dim]")
+    console.print(Panel.fit(
+        "[bold]Enter system instructions (guide the AI's behavior)[/bold]\n"
+        "[dim]Press Enter twice to finish[/dim]",
+        border_style="blue",
+        padding=(0, 2)
+    ))
     lines = []
     empty_line_count = 0
     while True:
@@ -89,15 +119,21 @@ def setup_wizard():
     # If no instructions provided, use a default value
     if not lines:
         system_instructions = "You are a helpful AI assistant."
-        console.print("[yellow]No system instructions provided. Using default instructions.[/yellow]")
+        console.print(Panel.fit(
+            "[yellow]No system instructions provided. Using default instructions.[/yellow]",
+            border_style="yellow",
+            padding=(0, 1)
+        ))
     else:
         system_instructions = "\n".join(lines)
 
     # Add theme selection
     available_themes = ['default', 'dark', 'light', 'hacker']
-    console.print("[green]Available themes:[/green]")
-    for theme in available_themes:
-        console.print(f"- {theme}")
+    console.print(Panel.fit(
+        f"[green]Available themes:[/green] {', '.join(available_themes)}",
+        border_style="green",
+        padding=(0, 1)
+    ))
     theme_choice = Prompt.ask("Select theme", choices=available_themes, default="default")
 
     # We already asked about thinking mode during model selection, so we'll use that value
@@ -110,7 +146,8 @@ def setup_wizard():
             "This reveals how the AI approaches your questions and can help you understand its thought process.\n\n"
             "[dim]Note: Not all models support this feature. If you notice issues with responses, you can disable it later with /thinking-mode[/dim]",
             title="🧠 AI Reasoning Process",
-            border_style="yellow"
+            border_style="yellow",
+            padding=(1, 2)
         ))
 
         thinking_mode = Prompt.ask(
@@ -186,13 +223,14 @@ def main():
     if args.setup or (not os.path.exists(config_file) and not os.path.exists(env_file)):
         config = setup_wizard()
         if config is None:
-            console.print("[red]Setup failed. Cannot continue without proper configuration. Exiting.[/red]")
+            console.print(Panel.fit(
+                "[red]Setup failed. Cannot continue without proper configuration. Exiting.[/red]",
+                border_style="red",
+                padding=(0, 1)
+            ))
             sys.exit(1)
     else:
         config = load_config()
-
-    # Show welcome UI
-    create_chat_ui()
 
     # Auto-check for updates on startup
     try:
@@ -202,15 +240,27 @@ def main():
 
     # Check if API key is set
     if not config['api_key'] or config['api_key'] == "<YOUR_OPENROUTER_API_KEY>":
-        console.print("[red]API key not found or not set correctly.[/red]")
+        console.print(Panel.fit(
+            "[red]API key not found or not set correctly.[/red]",
+            border_style="red",
+            padding=(0, 1)
+        ))
         setup_choice = Prompt.ask("Would you like to run the setup wizard? (y/n)", default="y")
         if setup_choice.lower() == 'y':
             config = setup_wizard()
             if config is None:
-                console.print("[red]Setup failed. Cannot continue without a valid API key. Exiting.[/red]")
+                console.print(Panel.fit(
+                    "[red]Setup failed. Cannot continue without a valid API key. Exiting.[/red]",
+                    border_style="red",
+                    padding=(0, 1)
+                ))
                 sys.exit(1)
         else:
-            console.print("[red]Cannot continue without a valid API key. Exiting.[/red]")
+            console.print(Panel.fit(
+                "[red]Cannot continue without a valid API key. Exiting.[/red]",
+                border_style="red",
+                padding=(0, 1)
+            ))
             sys.exit(1)
 
     # Handle task-specific model recommendation
@@ -220,7 +270,9 @@ def main():
             console.print(Panel.fit(
                 f"[bold green]Recommended models for {args.task} tasks:[/bold green]\n" +
                 "\n".join([f"- {model['id']}" for model in recommended_models[:5]]),
-                title="🎯 Task Optimization"
+                title="🎯 Task Optimization",
+                border_style="green",
+                padding=(1, 2)
             ))
 
             use_recommended = Prompt.ask(
@@ -248,13 +300,21 @@ def main():
         config['model'] = args.model
         save_config(config)
     elif not config['model']:
-        console.print("[yellow]No model selected. Please choose a model.[/yellow]")
+        console.print(Panel.fit(
+            "[yellow]No model selected. Please choose a model.[/yellow]",
+            border_style="yellow",
+            padding=(0, 1)
+        ))
         selected_model = select_model(config)
         if selected_model:
             config['model'] = selected_model
             save_config(config)
         else:
-            console.print("[red]Cannot continue without a valid model. Exiting.[/red]")
+            console.print(Panel.fit(
+                "[red]Cannot continue without a valid model. Exiting.[/red]",
+                border_style="red",
+                padding=(0, 1)
+            ))
             sys.exit(1)
 
     # Check if system instructions are set - make sure we don't prompt again after setup
@@ -262,7 +322,11 @@ def main():
         # Only prompt for system instructions if they weren't already set during setup
         # Set a default value without prompting
         config['system_instructions'] = "You are a helpful AI assistant."
-        console.print("[yellow]No system instructions set. Using default instructions.[/yellow]")
+        console.print(Panel.fit(
+            "[yellow]No system instructions set. Using default instructions.[/yellow]",
+            border_style="yellow",
+            padding=(0, 1)
+        ))
         save_config(config)
 
     # Handle image analysis if provided
@@ -273,9 +337,17 @@ def main():
         ]
         success, message = handle_attachment(args.image, conversation_history)
         if success:
-            console.print(f"[green]{message}[/green]")
+            console.print(Panel.fit(
+                f"[green]{message}[/green]",
+                border_style="green",
+                padding=(0, 1)
+            ))
         else:
-            console.print(f"[red]{message}[/red]")
+            console.print(Panel.fit(
+                f"[red]{message}[/red]",
+                border_style="red",
+                padding=(0, 1)
+            ))
 
     # Start chat
     chat_with_model(config, conversation_history)

@@ -23,7 +23,7 @@ last_thinking_content = ""
 
 def stream_response(response, start_time, thinking_mode=False):
     """Stream the response from the API with proper text formatting"""
-    console.print("\n[bold green]Assistant[/bold green]")
+    console.print("[bold green]Assistant[/bold green]")
 
     # Full content accumulates everything
     full_content = ""
@@ -113,22 +113,14 @@ def stream_response(response, start_time, thinking_mode=False):
         last_thinking_content = thinking_section
 
         # Display thinking content immediately if found
-        console.print(Panel.fit(
-            Markdown(last_thinking_content),
-            title="🧠 AI Thinking Process",
-            border_style="yellow"
-        ))
+        console.print(Markdown(last_thinking_content))
     else:
         # Also check if thinking_content has any content from our incremental collection
         if thinking_content.strip():
             last_thinking_content = thinking_content
 
             # Display thinking content immediately if found
-            console.print(Panel.fit(
-                Markdown(last_thinking_content),
-                title="🧠 AI Thinking Process",
-                border_style="yellow"
-            ))
+            console.print(Markdown(last_thinking_content))
 
     # Clean the full content - only if model supports thinking
     cleaned_content = full_content
@@ -146,12 +138,12 @@ def stream_response(response, start_time, thinking_mode=False):
 
     # If after cleaning we have nothing, use a default response
     if not cleaned_content.strip():
-        cleaned_content = "Hello! I\'m here to help you."
+        cleaned_content = "Hello! I'm here to help you."
 
     if cleaned_content:
         console.print(Markdown(cleaned_content))
     else:
-        console.print("Hello! I\'m here to help you.")
+        console.print("Hello! I'm here to help you.")
 
     response_time = time.time() - start_time
     return cleaned_content, response_time, usage_info
@@ -192,6 +184,14 @@ def manage_context_window(conversation_history, max_tokens=8000, model_name="cl1
         trimmed_history.insert(1, note)
 
     return trimmed_history, trimmed_count
+
+def create_chat_ui():
+    """Creates a modern, attractive CLI interface using rich components"""
+    # Removed panel printing to eliminate it from the response
+    console.print("1. [cyan]/help[/cyan] - View all available commands")
+    console.print("2. [cyan]/model[/cyan] - Change AI models")
+    console.print("3. [cyan]/theme[/cyan] - Customize appearance")
+
 
 def chat_with_model(config, conversation_history=None):
     """ Main chat loop with model interaction """
@@ -234,7 +234,8 @@ def chat_with_model(config, conversation_history=None):
             f"[yellow]Warning: High temperature setting ({config['temperature']}) may cause erratic responses.[/yellow]\n"
             f"Consider using a value between 0.0 and 1.0 for more coherent outputs.",
             title="⚠️ High Temperature Warning",
-            border_style="yellow"
+            border_style="yellow",
+            padding=(1, 2)
         ))
 
     # Get pricing information for the model
@@ -245,17 +246,25 @@ def chat_with_model(config, conversation_history=None):
     else:
         pricing_display += f" [dim]({pricing_info['provider']})[/dim]"
 
+    # Move session panel to first position and integrate status
     console.print(Panel.fit(
-        f"[bold blue]Or[/bold blue][bold green]Chat[/bold green] [dim]v{APP_VERSION}[/dim]\n"
-        f"[cyan]Model:[/cyan] {config['model']}\n"
-        f"[cyan]Temperature:[/cyan] {config['temperature']}\n"
-        f"[cyan]Thinking mode:[/cyan] {'[green]✓ Enabled[/green]' if config['thinking_mode'] else '[yellow]✗ Disabled[/yellow]'}\n"
+        f"[bold green]Or[/bold green][bold cyan]Chat[/bold cyan] [dim]v{APP_VERSION}[/dim]\n"
+        f"[dim]Model:[/dim] {config['model']}\n"
+        f"[dim]Temperature:[/dim] {config['temperature']}\n"
+        f"[dim]Thinking mode:[/dim] {'[green]✓ Enabled[/green]' if config['thinking_mode'] else '[yellow]✗ Disabled[/yellow]'}\n"
         f"{pricing_display}\n"
-        f"[cyan]Session started:[/cyan] {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-        f"Type your message or use commands: /help for available commands",
-        title="🤖 Chat Session Active",
-        border_style="green"
+        f"[dim]Status: Connected[/dim]\n"
+        f"[dim]Mode: Interactive[/dim]\n"
+        f"[dim]Session started:[/dim] {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        f"[dim]Type your message or use commands: /help for available commands[/dim]",
+        title="🤖 Neural Link Active",
+        border_style="green",
+        padding=(1, 2)
     ))
+
+    # Show welcome UI after session panel
+    create_chat_ui()
+
 
     # Add session tracking
     session_start_time = time.time()
@@ -289,23 +298,28 @@ def chat_with_model(config, conversation_history=None):
     # Check if we need to trim the conversation history
     conversation_history, trimmed_count = manage_context_window(conversation_history, max_tokens=max_tokens, model_name=config['model'])
     if trimmed_count > 0:
-        console.print(f"[yellow]Note: Removed {trimmed_count} earlier messages to stay within the context window.[/yellow]")
+        console.print(Panel.fit(
+            f"[yellow]Note: Removed {trimmed_count} earlier messages to stay within the context window.[/yellow]",
+            border_style="green",
+            padding=(0, 1)
+        ))
 
     while True:
         try:
             # Display user input panel similar to assistant style
             console.print("\n")
-            console.print(Panel.fit(
-                "Enter your message",
-                title="👤 You",
-                border_style="blue"
-            ))
+            # console.print(Panel.fit(
+            #     "Enter your message",
+            #     title="👤 Human Input",
+            #     border_style="green",
+            #     padding=(0, 2)
+            # ))
             
             # Use auto-completion if available, otherwise fallback to regular input
             if HAS_PROMPT_TOOLKIT:
                 user_input = get_user_input_with_completion(session_history)
             else:
-                print("> ", end="")
+                console.print("[bold green]👤 >[/bold green] ", end="")
                 user_input = input()
 
             # Ignore empty or whitespace-only input
@@ -322,8 +336,16 @@ def chat_with_model(config, conversation_history=None):
                 file_path = user_input[1:].strip()
                 
                 if not file_path:
-                    console.print("[yellow]Please select a file using the file picker.[/yellow]")
-                    console.print("[dim]Type # to browse files in the current directory[/dim]")
+                    console.print(Panel.fit(
+                        "[yellow]Please select a file using the file picker.[/yellow]",
+                        border_style="yellow",
+                        padding=(0, 1)
+                    ))
+                    console.print(Panel.fit(
+                        "[dim]Type # to browse files in the current directory[/dim]",
+                        border_style="blue",
+                        padding=(0, 1)
+                    ))
                     continue
                 
                 # Handle relative paths - make them absolute
@@ -332,8 +354,16 @@ def chat_with_model(config, conversation_history=None):
                 
                 # Check if file exists
                 if not os.path.exists(file_path):
-                    console.print(f"[red]File not found: {file_path}[/red]")
-                    console.print("[dim]Make sure the file path is correct and the file exists.[/dim]")
+                    console.print(Panel.fit(
+                        f"[red]File not found: {file_path}[/red]",
+                        border_style="red",
+                        padding=(0, 1)
+                    ))
+                    console.print(Panel.fit(
+                        "[dim]Make sure the file path is correct and the file exists.[/dim]",
+                        border_style="blue",
+                        padding=(0, 1)
+                    ))
                     continue
 
                 # Show attachment preview
@@ -347,19 +377,32 @@ def chat_with_model(config, conversation_history=None):
                     f"Type: {file_ext[1:].upper() if file_ext else 'Unknown'}\n"
                     f"Size: {file_size_formatted}",
                     title="📎 Attachment Preview",
-                    border_style="cyan"
+                    border_style="cyan",
+                    padding=(1, 2)
                 ))
 
                 # Process the file attachment
                 success, message = handle_attachment(file_path, conversation_history)
                 if success:
-                    console.print(f"[green]{message}[/green]")
+                    console.print(Panel.fit(
+                        f"[green]{message}[/green]",
+                        border_style="green",
+                        padding=(0, 1)
+                    ))
                 else:
-                    console.print(f"[red]{message}[/red]")
+                    console.print(Panel.fit(
+                        f"[red]{message}[/red]",
+                        border_style="red",
+                        padding=(0, 1)
+                    ))
                     continue
                 
                 # Continue to get user's actual message about the file
-                console.print("\n[dim]The file has been attached. Now enter your message about this file:[/dim]")
+                console.print(Panel.fit(
+                    "\n[dim]The file has been attached. Now enter your message about this file:[/dim]",
+                    border_style="blue",
+                    padding=(0, 1)
+                ))
                 
                 # Get user input for the message about the file
                 if HAS_PROMPT_TOOLKIT:
@@ -394,8 +437,16 @@ def chat_with_model(config, conversation_history=None):
                             
                             # Check if file exists
                             if not os.path.exists(file_part):
-                                console.print(f"[red]File not found: {file_part}[/red]")
-                                console.print("[dim]Make sure the file path is correct and the file exists.[/dim]")
+                                console.print(Panel.fit(
+                                    f"[red]File not found: {file_part}[/red]",
+                                    border_style="red",
+                                    padding=(0, 1)
+                                ))
+                                console.print(Panel.fit(
+                                    "[dim]Make sure the file path is correct and the file exists.[/dim]",
+                                    border_style="blue",
+                                    padding=(0, 1)
+                                ))
                                 continue
 
                         # Show attachment preview
@@ -409,7 +460,8 @@ def chat_with_model(config, conversation_history=None):
                             f"Type: {file_ext[1:].upper() if file_ext else 'Unknown'}\n"
                             f"Size: {file_size_formatted}",
                             title="📎 Attachment Preview",
-                            border_style="cyan"
+                            border_style="cyan",
+                            padding=(1, 2)
                         ))
 
                         # Process the file attachment
@@ -429,14 +481,22 @@ def chat_with_model(config, conversation_history=None):
                             if combined_message:
                                 user_input = combined_message
                             else:
-                                console.print("\n[dim]File attached. Enter your message about this file:[/dim]")
+                                console.print(Panel.fit(
+                                    "\n[dim]File attached. Enter your message about this file:[/dim]",
+                                    border_style="blue",
+                                    padding=(0, 1)
+                                ))
                                 if HAS_PROMPT_TOOLKIT:
                                     user_input = get_user_input_with_completion(session_history)
                                 else:
                                     print("> ", end="")
                                     user_input = input()
                         else:
-                            console.print(f"[red]{attachment_message}[/red]")
+                            console.print(Panel.fit(
+                                f"[red]{attachment_message}[/red]",
+                                border_style="red",
+                                padding=(0, 1)
+                            ))
                             continue
             
             # Process commands if we have one
@@ -444,7 +504,11 @@ def chat_with_model(config, conversation_history=None):
                 command = user_input.lower()
 
                 if command == '/exit' or command == '/quit':
-                    console.print("[yellow]Exiting chat...[/yellow]")
+                    console.print(
+                        "[yellow]Exiting chat...[/yellow]",
+                        border_style="yellow",
+                        padding=(0, 1)
+                    )
                     break
 
                 if command == '/help':
@@ -524,7 +588,9 @@ def chat_with_model(config, conversation_history=None):
                         f"Model: {config['model']}\n"
                         f"Temperature: {config['temperature']}\n"
                         f"System Instructions: {config['system_instructions'][:50]}...",
-                        title="Settings"
+                        title="Settings",
+                        border_style="blue",
+                        padding=(1, 2)
                     ))
                     continue
 
@@ -566,7 +632,8 @@ def chat_with_model(config, conversation_history=None):
                     console.print(Panel.fit(
                         stats_text,
                         title="📈 Token Statistics",
-                        border_style="cyan"
+                        border_style="cyan",
+                        padding=(1, 2)
                     ))
                     continue
 
@@ -583,7 +650,9 @@ def chat_with_model(config, conversation_history=None):
                             f"Fastest: {format_time_delta(min_time)}\n"
                             f"Slowest: {format_time_delta(max_time)}\n"
                             f"Total responses: {len(response_times)}",
-                            title="Speed Statistics"
+                            title="Speed Statistics",
+                            border_style="blue",
+                            padding=(1, 2)
                         ))
                     continue
 
@@ -594,7 +663,11 @@ def chat_with_model(config, conversation_history=None):
                         save_config(config)
                         console.print(f"[green]Model changed to {config['model']}[/green]")
                     else:
-                        console.print("[yellow]Model selection cancelled[/yellow]")
+                        console.print(Panel.fit(
+                            "[yellow]Model selection cancelled[/yellow]",
+                            border_style="yellow",
+                            padding=(0, 1)
+                        ))
                     continue
 
                 elif command.startswith('/temperature'):
@@ -613,9 +686,17 @@ def chat_with_model(config, conversation_history=None):
                                 save_config(config)
                                 console.print(f"[green]Temperature set to {temp}[/green]")
                             else:
-                                console.print("[red]Temperature must be between 0 and 2[/red]")
+                                console.print(Panel.fit(
+                                    "[red]Temperature must be between 0 and 2[/red]",
+                                    border_style="red",
+                                    padding=(0, 1)
+                                ))
                         except ValueError:
-                            console.print("[red]Invalid temperature value[/red]")
+                            console.print(Panel.fit(
+                                "[red]Invalid temperature value[/red]",
+                                border_style="red",
+                                padding=(0, 1)
+                            ))
                     else:
                         new_temp = Prompt.ask("Enter new temperature (0.0-2.0)", default=str(config['temperature']))
                         try:
@@ -629,11 +710,23 @@ def chat_with_model(config, conversation_history=None):
 
                                 config['temperature'] = temp
                                 save_config(config)
-                                console.print(f"[green]Temperature set to {temp}[/green]")
+                                console.print(Panel.fit(
+                                    f"[green]Temperature set to {temp}[/green]",
+                                    border_style="green",
+                                    padding=(0, 1)
+                                ))
                             else:
-                                console.print("[red]Temperature must be between 0 and 2[/red]")
+                                console.print(Panel.fit(
+                                    "[red]Temperature must be between 0 and 2[/red]",
+                                    border_style="red",
+                                    padding=(0, 1)
+                                ))
                         except ValueError:
-                            console.print("[red]Invalid temperature value[/red]")
+                            console.print(Panel.fit(
+                                "[red]Invalid temperature value[/red]",
+                                border_style="red",
+                                padding=(0, 1)
+                            ))
                     continue
 
                 elif command.startswith('/system'):
@@ -644,7 +737,12 @@ def chat_with_model(config, conversation_history=None):
                         save_config(config)
                         console.print("[green]System instructions updated![/green]")
                     else:
-                        console.print(Panel(config['system_instructions'], title="Current System Instructions"))
+                        console.print(Panel.fit(
+                            config['system_instructions'],
+                            title="Current System Instructions",
+                            border_style="blue",
+                            padding=(1, 2)
+                        ))
                         change = Prompt.ask("Update system instructions? (y/n)", default="n")
                         if change.lower() == 'y':
                             console.print("[bold]Enter new system instructions (guide the AI's behavior)[/bold]")
@@ -680,12 +778,20 @@ def chat_with_model(config, conversation_history=None):
                         else:
                             console.print(f"[red]Invalid theme. Available themes: {', '.join(available_themes)}[/red]")
                     else:
-                        console.print(f"[cyan]Current theme:[/cyan] {config['theme']}")
-                        console.print(f"[cyan]Available themes:[/cyan] {', '.join(available_themes)}")
+                        console.print(Panel.fit(
+                            f"[cyan]Current theme:[/cyan] {config['theme']}\n"
+                            f"[cyan]Available themes:[/cyan] {', '.join(available_themes)}",
+                            border_style="blue",
+                            padding=(0, 2)
+                        ))
                         new_theme = Prompt.ask("Select theme", choices=available_themes, default=config['theme'])
                         config['theme'] = new_theme
                         save_config(config)
-                        console.print(f"[green]Theme changed to {new_theme}[/green]")
+                        console.print(Panel.fit(
+                            f"[green]Theme changed to {new_theme}[/green]",
+                            border_style="green",
+                            padding=(0, 1)
+                        ))
                     continue
 
                 elif command == '/about':
@@ -701,10 +807,15 @@ def chat_with_model(config, conversation_history=None):
                         console.print(Panel.fit(
                             last_thinking_content,
                             title="🧠 Last Thinking Process",
-                            border_style="yellow"
+                            border_style="green",
+                            padding=(1, 2)
                         ))
                     else:
-                        console.print("[yellow]No thinking content available from the last response.[/yellow]")
+                        console.print(Panel.fit(
+                            "[yellow]No thinking content available from the last response.[/yellow]",
+                            border_style="green",
+                            padding=(0, 1)
+                        ))
                     continue
 
                 elif command == '/thinking-mode':
@@ -730,11 +841,14 @@ def chat_with_model(config, conversation_history=None):
                             # Revert to original instructions without thinking tags
                             conversation_history[0]['content'] = original_instructions
 
-                    console.print(f"[green]Thinking mode is now {'enabled' if config['thinking_mode'] else 'disabled'}[/green]")
+                    console.print(Panel.fit(
+                        f"[green]Thinking mode is now {'enabled' if config['thinking_mode'] else 'disabled'}[/green]",
+                        border_style="green",
+                        padding=(0, 1)
+                    ))
                     continue
 
                 elif command in ('/cls', '/clear-screen'):
-
                     # Clear the terminal
                     clear_terminal()
 
@@ -748,21 +862,32 @@ def chat_with_model(config, conversation_history=None):
                         pricing_display += f" [green]({current_pricing_info['provider']})[/green]"
                         
                     console.print(Panel.fit(
-                        f"[bold blue]Or[/bold blue][bold green]Chat[/bold green] [dim]v{APP_VERSION}[/dim]\n"
-                        f"[cyan]Model:[/cyan] {config['model']}\n"
-                        f"[cyan]Temperature:[/cyan] {config['temperature']}\n"
-                        f"[cyan]Thinking mode:[/cyan] {'[green]✓ Enabled[/green]' if config['thinking_mode'] else '[yellow]✗ Disabled[/yellow]'}\n"
+                        f"[bold green]Or[/bold green][bold cyan]Chat[/bold cyan] [dim]v{APP_VERSION}[/dim]\n"
+                        f"[dim]Model:[/dim] {config['model']}\n"
+                        f"[dim]Temperature:[/dim] {config['temperature']}\n"
+                        f"[dim]Thinking mode:[/dim] {'[green]✓ Enabled[/green]' if config['thinking_mode'] else '[yellow]✗ Disabled[/yellow]'}\n"
                         f"{pricing_display}\n"
-                        f"[cyan]Session started:[/cyan] {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-                        f"Type your message or use commands: /help for available commands",
-                        title="🤖 Chat Session Active",
-                        border_style="green"
+                        f"[dim]Status: Connected[/dim]\n"
+                        f"[dim]Mode: Interactive[/dim]\n"
+                        f"[dim]Session started:[/dim] {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+                        f"[dim]Type your message or use commands: /help for available commands[/dim]",
+                        title="🤖 Neural Link Active",
+                        border_style="green",
+                        padding=(1, 2)
                     ))
-                    console.print("[green]Terminal screen cleared. Chat session continues.[/green]")
+                    console.print(Panel.fit(
+                        "[green]Terminal screen cleared. Chat session continues.[/green]",
+                        border_style="green",
+                        padding=(0, 1)
+                    ))
                     continue
 
                 else:
-                    console.print("[yellow]Unknown command. Type /help for available commands.[/yellow]")
+                    console.print(Panel.fit(
+                        "[yellow]Unknown command. Type /help for available commands.[/yellow]",
+                        border_style="yellow",
+                        padding=(0, 1)
+                    ))
                     continue
 
             # Count tokens in user input
@@ -785,7 +910,11 @@ def chat_with_model(config, conversation_history=None):
             # Check if we need to trim the conversation history
             conversation_history, trimmed_count = manage_context_window(conversation_history, max_tokens=max_tokens, model_name=config['model'])
             if trimmed_count > 0:
-                console.print(f"[yellow]Note: Removed {trimmed_count} earlier messages to stay within the context window.[/yellow]")
+                console.print(Panel.fit(
+                    f"[yellow]Note: Removed {trimmed_count} earlier messages to stay within the context window.[/yellow]",
+                    border_style="green",
+                    padding=(0, 1)
+                ))
 
             # Clean conversation history for API - remove any messages with invalid fields
             clean_conversation = []
@@ -890,7 +1019,11 @@ def chat_with_model(config, conversation_history=None):
                         message_count += 1
                     else:
                         # If we didn't get content but status was 200, something went wrong with streaming
-                        console.print("[red]Error: Received empty response from API[/red]")
+                        console.print(Panel.fit(
+                            "[red]Error: Received empty response from API[/red]",
+                            border_style="green",
+                            padding=(0, 1)
+                        ))
                         # Remove the user's last message since we didn't get a response
                         if conversation_history and conversation_history[-1]["role"] == "user":
                             conversation_history.pop()
@@ -915,24 +1048,45 @@ def chat_with_model(config, conversation_history=None):
                                 f"The model '[cyan]{config['model']}[/cyan]' requires credits to use.\n\n"
                                 f"{suggestions_text}",
                                 title="⚠️ Payment Required",
-                                border_style="red"
+                                border_style="green",
+                                padding=(1, 2)
                             ))
                         else:
-                            console.print(f"[red]API Error ({response.status_code}): {error_message}[/red]")
+                            console.print(Panel.fit(
+                                f"[red]API Error ({response.status_code}): {error_message}[/red]",
+                                border_style="green",
+                                padding=(0, 1)
+                            ))
                     except Exception:
-                        console.print(f"[red]API Error: Status code {response.status_code}[/red]")
-                        console.print(f"[red]{response.text}[/red]")
+                        console.print(Panel.fit(
+                            f"[red]API Error: Status code {response.status_code}[/red]",
+                            border_style="green",
+                            padding=(0, 1)
+                        ))
+                        console.print(Panel.fit(
+                            f"[red]{response.text}[/red]",
+                            border_style="green",
+                            padding=(0, 1)
+                        ))
 
-                    # Remove the user's last message since we didn't get a response
-                    if conversation_history and conversation_history[-1]["role"] == "user":
-                        conversation_history.pop()
+                # Remove the user's last message since we didn't get a response
+                if conversation_history and conversation_history[-1]["role"] == "user":
+                    conversation_history.pop()
             except requests.exceptions.RequestException as e:
-                console.print(f"[red]Network error: {str(e)}[/red]")
+                console.print(Panel.fit(
+                    f"[red]Network error: {str(e)}[/red]",
+                    border_style="green",
+                    padding=(0, 1)
+                ))
                 # Remove the user's last message since we didn't get a response
                 if conversation_history and conversation_history[-1]["role"] == "user":
                     conversation_history.pop()
             except Exception as e:
-                console.print(f"[red]Error: {str(e)}[/red]")
+                console.print(Panel.fit(
+                    f"[red]Error: {str(e)}[/red]",
+                    border_style="green",
+                    padding=(0, 1)
+                ))
                 # Remove the user's last message since we didn't get a response
                 if conversation_history and conversation_history[-1]["role"] == "user":
                     conversation_history.pop()
@@ -940,7 +1094,9 @@ def chat_with_model(config, conversation_history=None):
                 timer_display.stop()
 
         except KeyboardInterrupt:
-            console.print("\n[yellow]Keyboard interrupt detected. Type /exit to quit.[/yellow]")
+            console.print(
+                "\n[yellow]Keyboard interrupt detected. Type /exit to quit.[/yellow]",
+            )
             break
         except Exception as e:
             console.print(f"[red]Error: {str(e)}[/red]")
